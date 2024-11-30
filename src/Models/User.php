@@ -12,8 +12,17 @@ class User {
 
     public function create($playerId, $password) {
         $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
-        $stmt = $this->pdo->prepare("INSERT INTO users (player_id, password) VALUES (?, ?)");
-        return $stmt->execute([$playerId, $hashedPassword]);
+
+        // Verificar se o banco já tem superadmin
+        $isSuperadmin = $this->isSuperadminCreated() ? 0 : 1;
+
+        $stmt = $this->pdo->prepare("INSERT INTO users (player_id, password, is_superadmin) VALUES (?, ?, ?)");
+        return $stmt->execute([$playerId, $hashedPassword, $isSuperadmin]);
+    }
+
+    public function isSuperadminCreated() {
+        $stmt = $this->pdo->query("SELECT COUNT(*) FROM users WHERE is_superadmin = 1");
+        return $stmt->fetchColumn() > 0;
     }
 
     public function authenticate($playerId, $password) {
@@ -21,8 +30,9 @@ class User {
         $stmt->execute([$playerId]);
         $user = $stmt->fetch();
         if ($user && password_verify($password, $user['password'])) {
-            return true;
+            return $user;
         }
         return false;
     }
 }
+?>
